@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+(function(){var KEY='dc_consent',MAX=365*24*60*60*1000;
+  window.dcGetConsent=function(){try{var c=JSON.parse(localStorage.getItem(KEY)||'null');if(c&&c.v===1&&c.ts&&(Date.now()-c.ts)<MAX)return c;}catch(e){}return null;};
+  window.dcConsentSignals=function(c){var a=c&&c.analytics?'granted':'denied',m=c&&c.marketing?'granted':'denied';return{analytics_storage:a,ad_storage:m,ad_user_data:m,ad_personalization:m};};
+  gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',functionality_storage:'granted',security_storage:'granted',wait_for_update:500});
+  var c=window.dcGetConsent();if(c)gtag('consent','update',window.dcConsentSignals(c));})();
+</script>
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-W9K26S6W');</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta property="og:image" content="https://executivemovement.com.br">
@@ -404,12 +417,40 @@
     .waypoint{ width:34px; height:34px; font-size:.65rem; }
     .route-rail::before{ left:16px; }
   }
+
+  /* ===== BANNER DE COOKIES ===== */
+  .cc{position:fixed; left:20px; bottom:20px; z-index:300; max-width:440px; background:var(--bg); color:var(--ink);
+    border:1px solid var(--cream-line); box-shadow:0 12px 40px rgba(0,0,0,.25); padding:24px; border-radius:var(--radius);}
+  .cc[hidden]{display:none;}
+  .cc h2{font-size:1.15rem; margin-bottom:8px;}
+  .cc p{font-size:.86rem; color:var(--ink-soft); margin-bottom:16px;}
+  .cc p a{text-decoration:underline;}
+  .cc-custom{margin-bottom:16px; display:flex; flex-direction:column; gap:12px;}
+  .cc-custom[hidden]{display:none;}
+  .cc-row{display:flex; justify-content:space-between; align-items:center; gap:16px; margin:0; cursor:pointer; text-transform:none; letter-spacing:0; font-family:'Inter',sans-serif;}
+  .cc-row-text strong{display:block; font-size:.88rem; color:var(--ink);}
+  .cc-row-text small{display:block; font-size:.78rem; color:var(--ink-soft); font-weight:400;}
+  .cc-switch{position:relative; width:42px; height:24px; flex-shrink:0;}
+  .cc-switch input{position:absolute; inset:0; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; padding:0;}
+  .cc-switch i{position:absolute; inset:0; background:#ccc; border-radius:24px; transition:background .2s; pointer-events:none;}
+  .cc-switch i::after{content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .2s;}
+  .cc-switch input:checked + i{background:var(--wine);}
+  .cc-switch input:checked + i::after{transform:translateX(18px);}
+  .cc-switch input:disabled{cursor:not-allowed;}
+  .cc-switch input:disabled + i{opacity:.55;}
+  .cc-switch input:focus-visible + i{outline:2px solid var(--brass); outline-offset:2px;}
+  .cc-actions{display:flex; gap:8px; flex-wrap:wrap;}
+  .cc-actions .btn{padding:10px 14px; font-size:.8rem;}
+  .footer-bottom a{color:rgba(255,255,255,.7); text-decoration:underline;}
+  @media (max-width:720px){ .cc{left:12px; right:12px; bottom:12px; max-width:none;} }
   @media (prefers-reduced-motion: reduce){
     *{ transition:none !important; scroll-behavior:auto !important; }
   }
 </style>
 </head>
 <body>
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W9K26S6W"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <header id="siteHeader">
   <a href="#topo" class="brand">
@@ -696,6 +737,7 @@
     </div>
     <div class="footer-bottom">
       <span>© 2026 Executive Movement Transporte Executivo e Turismo. Todos os direitos reservados.</span>
+      <span><a href="/politica-de-cookies.html">Política de cookies</a> · <a href="#" data-open-consent>Preferências de cookies</a></span>
     </div>
   </div>
 </footer>
@@ -765,8 +807,32 @@ Número de pessoas: ${f.pessoas.value || '-'}
 Cidades de interesse: ${f.destinos.value || '-'}
 Observação: ${f.obs.value || '-'}`;
     const url = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
+    if (window.dcTrackLead) window.dcTrackLead({ form_id: 'orcamento', form_name: 'orcamento_home', lead_type: 'orcamento' });
+    // envia o lead por e-mail (em paralelo; não bloqueia a abertura do WhatsApp)
+    const cfg = window.DC_CONFIG || {};
+    if (cfg.formEmail) {
+      try {
+        fetch('https://formsubmit.co/ajax/' + encodeURIComponent(cfg.formEmail), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            _subject: 'Novo orçamento pelo site — ' + f.nome.value,
+            _cc: cfg.formEmailCc || '',
+            _template: 'table',
+            _captcha: 'false',
+            Nome: f.nome.value, Telefone: f.telefone.value, Email: f.email.value || '-',
+            Cidade: f.cidade.value || '-', 'Número de pessoas': f.pessoas.value || '-',
+            'Cidades de interesse': f.destinos.value || '-', Observação: f.obs.value || '-'
+          }),
+          keepalive: true
+        }).catch(function(){});
+      } catch (err) {}
+    }
     window.open(url, '_blank');
   });
 </script>
+<script src="/js/consent.js"></script>
+<script src="/js/tracking.js"></script>
+<script src="/js/config.js"></script>
 </body>
 </html>
