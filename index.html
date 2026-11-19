@@ -816,7 +816,7 @@ Observação: ${f.obs.value || '-'}`;
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({
-            _subject: 'Novo orçamento pelo site — ' + f.nome.value,
+            _subject: (window.dcLeadSubject ? window.dcLeadSubject() : 'Novo lead site Executive Movement - Home'),
             _cc: cfg.formEmailCc || '',
             _template: 'table',
             _captcha: 'false',
@@ -834,5 +834,6 @@ Observação: ${f.obs.value || '-'}`;
 <script src="/js/consent.js"></script>
 <script src="/js/tracking.js"></script>
 <script src="/js/config.js"></script>
+<script src="/js/whatsapp-lead.js"></script>
 </body>
 </html>
