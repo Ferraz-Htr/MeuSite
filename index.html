@@ -826,25 +826,14 @@ Cidades de interesse: ${f.destinos.value || '-'}
 Observação: ${f.obs.value || '-'}`;
     const url = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
     if (window.dcTrackLead) window.dcTrackLead({ form_id: 'orcamento', form_name: 'orcamento_home', lead_type: 'orcamento' });
-    // envia o lead por e-mail (em paralelo; não bloqueia a abertura do WhatsApp)
-    const cfg = window.DC_CONFIG || {};
-    if (cfg.formEmail) {
-      try {
-        fetch('https://formsubmit.co/ajax/' + encodeURIComponent(cfg.formEmail), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(Object.assign({
-            _subject: (window.dcLeadSubject ? window.dcLeadSubject() : 'Novo lead site Executive Movement - Home'),
-            _cc: cfg.formEmailCc || '',
-            _template: 'table',
-            _captcha: 'false',
-            Nome: f.nome.value, Telefone: f.telefone.value, Email: f.email.value || '-',
-            Cidade: f.cidade.value || '-', 'Número de pessoas': f.pessoas.value || '-',
-            'Cidades de interesse': f.destinos.value || '-', Observação: f.obs.value || '-', Origem: 'Formulário de orçamento'
-          }, window.dcUtmFields ? window.dcUtmFields() : {})),
-          keepalive: true
-        }).catch(function(){});
-      } catch (err) {}
+    // envia o lead por e-mail (fila + reenvio; não bloqueia a abertura do WhatsApp)
+    if (window.dcSendLead) {
+      window.dcSendLead(Object.assign({
+        _subject: (window.dcLeadSubject ? window.dcLeadSubject() : 'Novo lead site Executive Movement - Home'),
+        Nome: f.nome.value, Telefone: f.telefone.value, Email: f.email.value || '-',
+        Cidade: f.cidade.value || '-', 'Número de pessoas': f.pessoas.value || '-',
+        'Cidades de interesse': f.destinos.value || '-', Observação: f.obs.value || '-', Origem: 'Formulário de orçamento'
+      }, window.dcUtmFields ? window.dcUtmFields() : {}), 'orcamento');
     }
     window.open(url, '_blank');
   });

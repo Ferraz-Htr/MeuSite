@@ -99,6 +99,48 @@
     setTimeout(function () { var n = document.getElementById('wlNome'); if (n) n.focus(); }, 50);
   });
 
+
+  // ---- envio confiável do lead por e-mail (fila + reenvio + status no dataLayer) ----
+  var QK = 'dc_lead_queue';
+  function qGet(){ try { return JSON.parse(localStorage.getItem(QK) || '[]'); } catch(e){ return []; } }
+  function qSet(a){ try { localStorage.setItem(QK, JSON.stringify(a.slice(-10))); } catch(e){} }
+  function dl(ev, extra){ try { (window.dataLayer = window.dataLayer || []).push(Object.assign({ event: ev }, extra || {})); } catch(e){} }
+  function post(item){
+    var cfg = window.DC_CONFIG || {};
+    var url = 'https://formsubmit.co/ajax/' + encodeURIComponent(cfg.formEmail);
+    return fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json', 'Accept':'application/json' }, body: JSON.stringify(item.data), keepalive: true })
+      .then(function (r) { return r.json().catch(function(){ return {}; }).then(function (j) {
+        if (!r.ok || (j && (j.success === false || j.success === 'false'))) throw new Error('fs_' + r.status);
+        return true; }); });
+  }
+  function done(id){ qSet(qGet().filter(function(x){ return x.id !== id; })); }
+  function send(item, tries){
+    return post(item).then(function(){ done(item.id); dl('lead_email_sent', { lead_form: item.form }); })
+      .catch(function(err){
+        if (tries < 2) { return new Promise(function(r){ setTimeout(r, 1500); }).then(function(){ return send(item, tries + 1); }); }
+        dl('lead_email_failed', { lead_form: item.form, error: String(err && err.message || err) });
+        try { var cfg = window.DC_CONFIG||{}; var b = new URLSearchParams(); Object.keys(item.data).forEach(function(k){ b.append(k, item.data[k]); });
+          if (navigator.sendBeacon) navigator.sendBeacon('https://formsubmit.co/ajax/' + encodeURIComponent(cfg.formEmail), b); } catch(e){}
+      });
+  }
+  window.dcSendLead = function (data, form) {
+    var cfg = window.DC_CONFIG || {};
+    if (!cfg.formEmail) return;
+    data = Object.assign({ _cc: cfg.formEmailCc || '', _template: 'table', _captcha: 'false' }, data);
+    var item = { id: Date.now() + '_' + Math.random().toString(36).slice(2, 7), form: form || '', data: data };
+    var q = qGet(); q.push(item); qSet(q);
+    send(item, 0);
+  };
+  // reenvia leads que ficaram pendentes (página fechou antes da confirmação)
+  setTimeout(function () {
+    if (!(window.DC_CONFIG || {}).formEmail) return;
+    qGet().forEach(function (it) {
+      if (Date.now() - parseInt(it.id, 10) < 5000) return;
+      it.data._subject = '[reenvio] ' + (it.data._subject || 'Novo lead site');
+      send(it, 0);
+    });
+  }, 2500);
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     if (!pending) return close();
@@ -109,20 +151,10 @@
 
     if (window.dcTrackLead) window.dcTrackLead({ form_id: 'whatsapp_modal', form_name: 'whatsapp_' + originKey(o.origem), lead_type: 'whatsapp' });
 
-    var cfg = window.DC_CONFIG || {};
-    if (cfg.formEmail) {
-      try {
-        fetch('https://formsubmit.co/ajax/' + encodeURIComponent(cfg.formEmail), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(Object.assign({
-            _subject: window.dcLeadSubject(), _cc: cfg.formEmailCc || '', _template: 'table', _captcha: 'false',
-            Nome: nome, WhatsApp: zap, 'Serviço desejado': serv, Origem: o.origem, Página: pageName()
-          }, window.dcUtmFields())),
-          keepalive: true
-        }).catch(function () {});
-      } catch (err) {}
-    }
+    window.dcSendLead(Object.assign({
+      _subject: window.dcLeadSubject(),
+      Nome: nome, WhatsApp: zap, 'Serviço desejado': serv, Origem: o.origem, Página: pageName()
+    }, window.dcUtmFields()), 'whatsapp_modal');
 
     if (/^tel:/i.test(o.href)) { form.reset(); window.location.href = o.href; return; }
     var base = o.href.split('?')[0];
